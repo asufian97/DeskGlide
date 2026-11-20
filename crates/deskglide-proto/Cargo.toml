@@ -1,0 +1,9 @@
+[package]
+name = "deskglide-proto"
+description = "OS-neutral binary wire protocol and Windows<->Linux key mapping for DeskGlide"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]

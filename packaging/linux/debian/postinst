@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+if [ "$1" = "configure" ]; then
+    getent group input >/dev/null || groupadd --system input
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+        usermod -aG input "$SUDO_USER" || true
+    fi
+    modprobe uinput || true
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules || true
+        udevadm trigger --subsystem-match=misc --sysname-match=uinput || true
+    fi
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q || true
+    fi
+    if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+        ufw allow 24910/udp comment 'DeskGlide encrypted QUIC' >/dev/null 2>&1 || true
+    fi
+fi

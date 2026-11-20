@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=DeskGlide
+Comment=Encrypted Wi-Fi/LAN Keyboard and Mouse Sharing (Windows & Linux)
+Exec=/usr/bin/deskglide-app
+Icon=deskglide
+Terminal=false
+Type=Application
+Categories=Utility;Network;
+Keywords=kvm;mouse;keyboard;lan;wayland;
+StartupWMClass=deskglide

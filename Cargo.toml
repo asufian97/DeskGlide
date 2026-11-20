@@ -1,0 +1,47 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/deskglide-proto",
+    "crates/deskglide-input",
+    "crates/deskglide-net",
+    "crates/deskglide-engine",
+    "crates/deskglide-cli",
+    "crates/deskglide-gui",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.82"
+
+[workspace.dependencies]
+deskglide-proto = { path = "crates/deskglide-proto" }
+deskglide-input = { path = "crates/deskglide-input" }
+deskglide-net = { path = "crates/deskglide-net" }
+deskglide-engine = { path = "crates/deskglide-engine" }
+
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "signal", "net"] }
+quinn = { version = "0.11", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "ring"] }
+sha2 = "0.10"
+hmac = "0.12"
+rand = "0.9"
+bytes = "1"
+clap = { version = "4.5", features = ["derive", "env"] }
+directories = "6"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+mdns-sd = "0.21"
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "x11", "wayland"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"

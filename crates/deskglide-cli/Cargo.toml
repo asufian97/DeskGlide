@@ -1,0 +1,22 @@
+[package]
+name = "deskglide-cli"
+description = "Unified Server and Client CLI binary for DeskGlide"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "deskglide"
+path = "src/main.rs"
+
+[dependencies]
+deskglide-proto.workspace = true
+deskglide-input.workspace = true
+deskglide-net.workspace = true
+deskglide-engine.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
