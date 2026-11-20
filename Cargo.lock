@@ -715,7 +715,7 @@ checksum = "9e9de72ce2ad1f90dc62fa25f0f430ef85eb4b0d8fa0be4f30373bc40a21d28e"
 
 [[package]]
 name = "deskglide-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -730,7 +730,7 @@ dependencies = [
 
 [[package]]
 name = "deskglide-engine"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "arboard",
@@ -744,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "deskglide-gui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "deskglide-engine",
@@ -761,7 +761,7 @@ dependencies = [
 
 [[package]]
 name = "deskglide-input"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "deskglide-proto",
@@ -774,7 +774,7 @@ dependencies = [
 
 [[package]]
 name = "deskglide-net"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "deskglide-proto"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "digest"

@@ -45,9 +45,17 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
 
-    eframe::run_native(
+    let res = eframe::run_native(
         "DeskGlide",
         native_options,
         Box::new(|cc| Ok(Box::new(app::DeskGlideApp::new(cc)))),
-    )
+    );
+    if let Err(ref e) = res {
+        let msg = format!("DeskGlide failed to start: {e}\n");
+        eprint!("{msg}");
+        let log_dir = deskglide_net::config_dir();
+        let _ = std::fs::create_dir_all(&log_dir);
+        let _ = std::fs::write(log_dir.join("startup-error.log"), &msg);
+    }
+    res
 }
