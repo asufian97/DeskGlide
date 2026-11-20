@@ -129,3 +129,8 @@ jobs:
             | **Windows 11** (Portable ZIP) | `DeskGlide-Windows-Portable-x64.zip` | Unzip and double-click `deskglide-app.exe` |
             | **Zorin OS / Ubuntu / Debian** | `DeskGlide-Linux-Debian-Zorin-amd64.deb` | Double-click to install (Wayland & X11 ready) |
             | **Other Linux (x86_64)** | `DeskGlide-Linux-Portable-x86_64.tar.gz` | Extract and run `./setup-uinput.sh` once |
+
+            **Install or upgrade on Zorin OS / Ubuntu / Debian:**
+            ```bash
+            sudo apt install ./DeskGlide-Linux-Debian-Zorin-amd64.deb
+            ```

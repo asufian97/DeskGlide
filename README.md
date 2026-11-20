@@ -24,8 +24,14 @@
 |---|---|---|
 | **Windows 11** (Installer — Recommended) | [**DeskGlide-Windows-Setup-x64.exe**](https://github.com/asufian97/DeskGlide/releases/latest/download/DeskGlide-Windows-Setup-x64.exe) | Run the installer — adds Start Menu shortcut & Windows Firewall rule automatically |
 | **Windows 11** (Portable ZIP) | [**DeskGlide-Windows-Portable-x64.zip**](https://github.com/asufian97/DeskGlide/releases/latest/download/DeskGlide-Windows-Portable-x64.zip) | Unzip and double-click `deskglide-app.exe` |
-| **Zorin OS / Ubuntu / Debian** (`.deb`) | [**DeskGlide-Linux-Debian-Zorin-amd64.deb**](https://github.com/asufian97/DeskGlide/releases/latest/download/DeskGlide-Linux-Debian-Zorin-amd64.deb) | Double-click to install (or `sudo apt install ./DeskGlide-Linux-Debian-Zorin-amd64.deb`) |
+| **Zorin OS / Ubuntu / Debian** (`.deb`) | [**DeskGlide-Linux-Debian-Zorin-amd64.deb**](https://github.com/asufian97/DeskGlide/releases/latest/download/DeskGlide-Linux-Debian-Zorin-amd64.deb) | Double-click to install (or see terminal command below) |
 | **Other Linux** (Fedora / Arch / etc.) | [**DeskGlide-Linux-Portable-x86_64.tar.gz**](https://github.com/asufian97/DeskGlide/releases/latest/download/DeskGlide-Linux-Portable-x86_64.tar.gz) | Extract, run `sudo ./setup-uinput.sh` once, then run `./deskglide-app` |
+
+**Install or upgrade on Zorin OS / Ubuntu / Debian** (after downloading the `.deb` above):
+
+```bash
+sudo apt install ./DeskGlide-Linux-Debian-Zorin-amd64.deb
+```
 
 Need an older version or checksums? See the [**All Releases**](https://github.com/asufian97/DeskGlide/releases) page.
 
