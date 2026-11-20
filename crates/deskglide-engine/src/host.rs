@@ -179,9 +179,9 @@ async fn run_active_session(
     let mut heartbeat_tick = interval(Duration::from_secs(1));
     heartbeat_tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
-    let mut clipboard_tick = interval(Duration::from_millis(400));
+    let mut clipboard_tick = interval(Duration::from_millis(750));
     clipboard_tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
-    let mut clipboard = ClipboardSync::new();
+    let mut clipboard = (*clipboard_enabled).then(ClipboardSync::new);
 
     loop {
         tokio::select! {
@@ -193,6 +193,11 @@ async fn run_active_session(
                     }
                     Some(HostCommand::SetClipboardSync(enabled)) => {
                         *clipboard_enabled = enabled;
+                        if enabled && clipboard.is_none() {
+                            clipboard = Some(ClipboardSync::new());
+                        } else if !enabled {
+                            clipboard = None;
+                        }
                     }
                     Some(HostCommand::ToggleControl) => {
                         let next = !capture.is_remote_active();
@@ -282,7 +287,8 @@ async fn run_active_session(
             }
             _ = clipboard_tick.tick() => {
                 if *clipboard_enabled {
-                    if let Some(text) = clipboard.poll_local_change() {
+                    let cb = clipboard.get_or_insert_with(ClipboardSync::new);
+                    if let Some(text) = cb.poll_local_change() {
                         if session.send_reliable(&Message::ClipboardText(text)).await.is_err() {
                             return false;
                         }
@@ -314,7 +320,9 @@ async fn run_active_session(
                     }
                     Ok(Some(Message::ClipboardText(text))) => {
                         if *clipboard_enabled {
-                            clipboard.apply_remote(&text);
+                            clipboard
+                                .get_or_insert_with(ClipboardSync::new)
+                                .apply_remote(&text);
                         }
                     }
                     Ok(Some(Message::Heartbeat { timestamp_ms })) => {

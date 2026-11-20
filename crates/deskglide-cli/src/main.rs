@@ -135,7 +135,7 @@ fn default_device_name() -> String {
         .unwrap_or_else(|_| deskglide_proto::OsKind::current().to_string())
 }
 
-#[tokio::main]
+#[tokio::main(worker_threads = 2)]
 async fn main() -> Result<()> {
     // When double-clicked with no arguments, launch the sibling desktop GUI if present.
     if std::env::args_os().len() == 1 {

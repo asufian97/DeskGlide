@@ -19,7 +19,7 @@ use eframe::egui::{
 };
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 use crate::tray::{SystemTray, TrayAction};
 
@@ -76,7 +76,9 @@ pub struct DeskGlideApp {
     running: Option<RunningEngine>,
 
     mdns_browser: Option<MdnsBrowser>,
+    mdns_failed: bool,
     tray: SystemTray,
+    hidden_to_tray: bool,
     force_quit: bool,
 
     pairing_target: Option<DiscoveredHost>,
@@ -98,6 +100,7 @@ impl DeskGlideApp {
         apply_theme(&cc.egui_ctx);
 
         let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
             .enable_all()
             .build()
             .expect("failed creating Tokio runtime");
@@ -112,16 +115,16 @@ impl DeskGlideApp {
             Err(e) => (None, Some((format!("Certificate init failed: {e:#}"), true))),
         };
 
-        let mdns_browser = match MdnsBrowser::start() {
-            Ok(b) => Some(b),
-            Err(e) => {
-                warn!("mDNS discovery unavailable: {e:#}");
-                None
-            }
-        };
-
         let (status_tx, status_rx) = watch::channel(EngineStatus::Idle);
-        let tray = SystemTray::start();
+        let mut status_watch = status_rx.clone();
+        let status_repaint = cc.egui_ctx.clone();
+        rt.spawn(async move {
+            while status_watch.changed().await.is_ok() {
+                status_repaint.request_repaint();
+            }
+        });
+
+        let tray = SystemTray::start(cc.egui_ctx.clone());
         let lan_ip = detect_lan_ip();
         let tab = match config.mode {
             AppMode::Host => ActiveTab::Host,
@@ -141,8 +144,10 @@ impl DeskGlideApp {
             status_tx,
             status_rx,
             running: None,
-            mdns_browser,
+            mdns_browser: None,
+            mdns_failed: false,
             tray,
+            hidden_to_tray: false,
             force_quit: false,
             pairing_target: None,
             pairing_code_input: String::new(),
@@ -157,6 +162,8 @@ impl DeskGlideApp {
             uinput_writable,
         };
 
+        app.sync_mdns_browser(&cc.egui_ctx);
+
         if app.config.mode == AppMode::Client && app.config.auto_connect {
             if let Some(first) = app.config.paired_hosts.first().cloned() {
                 app.connect_to_saved(&first);
@@ -164,6 +171,30 @@ impl DeskGlideApp {
         }
 
         app
+    }
+
+    fn sync_mdns_browser(&mut self, ctx: &egui::Context) {
+        let want_mdns = self.tab == ActiveTab::Client && !self.is_running() && !self.hidden_to_tray;
+        if want_mdns && self.mdns_browser.is_none() && !self.mdns_failed {
+            match MdnsBrowser::start() {
+                Ok(b) => {
+                    let mut watch = b.watch();
+                    let repaint = ctx.clone();
+                    self.rt.spawn(async move {
+                        while watch.changed().await.is_ok() {
+                            repaint.request_repaint();
+                        }
+                    });
+                    self.mdns_browser = Some(b);
+                }
+                Err(e) => {
+                    warn!("mDNS discovery unavailable: {e:#}");
+                    self.mdns_failed = true;
+                }
+            }
+        } else if !want_mdns && self.mdns_browser.is_some() {
+            self.mdns_browser = None;
+        }
     }
 
     fn save_config(&mut self) {
@@ -300,6 +331,7 @@ impl DeskGlideApp {
         while let Some(action) = self.tray.poll_action() {
             match action {
                 TrayAction::ShowWindow => {
+                    self.hidden_to_tray = false;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                 }
@@ -315,6 +347,7 @@ impl DeskGlideApp {
             && !self.force_quit
             && self.tray.is_available()
         {
+            self.hidden_to_tray = true;
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
         }
@@ -330,7 +363,6 @@ impl Drop for DeskGlideApp {
 impl eframe::App for DeskGlideApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        ctx.request_repaint_after(Duration::from_millis(120));
         self.handle_tray_and_close(&ctx);
 
         if let Some(r) = &self.running {
@@ -342,6 +374,11 @@ impl eframe::App for DeskGlideApp {
             if finished {
                 self.running = None;
             }
+        }
+
+        self.sync_mdns_browser(&ctx);
+        if !self.hidden_to_tray {
+            ctx.request_repaint_after(Duration::from_secs(1));
         }
 
         let status = self.status_rx.borrow().clone();
@@ -466,6 +503,7 @@ impl DeskGlideApp {
             // Right: Status pill + Hide to Tray
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if self.tray.is_available() && ui.button("Hide").clicked() {
+                    self.hidden_to_tray = true;
                     ui.ctx()
                         .send_viewport_cmd(egui::ViewportCommand::Visible(false));
                 }
@@ -1777,7 +1815,7 @@ fn open_windows_firewall_uac(port: u16) -> anyhow::Result<()> {
     std::process::Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_cmd])
         .spawn()?;
-    info!("Launched UAC prompt to add Windows Firewall rule for UDP {port}");
+    tracing::info!("Launched UAC prompt to add Windows Firewall rule for UDP {port}");
     Ok(())
 }
 

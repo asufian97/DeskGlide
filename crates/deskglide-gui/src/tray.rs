@@ -2,6 +2,7 @@
 
 use std::sync::mpsc;
 
+use eframe::egui;
 use tracing::warn;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,11 +20,11 @@ pub struct SystemTray {
 }
 
 impl SystemTray {
-    pub fn start() -> Self {
+    pub fn start(repaint_ctx: egui::Context) -> Self {
         let (tx, rx) = mpsc::channel();
 
         #[cfg(target_os = "windows")]
-        let win = match win_tray::WinTray::new(tx.clone()) {
+        let win = match win_tray::WinTray::new(tx.clone(), repaint_ctx.clone()) {
             Ok(t) => Some(t),
             Err(e) => {
                 warn!("system tray unavailable on Windows: {e:#}");
@@ -32,7 +33,7 @@ impl SystemTray {
         };
 
         #[cfg(target_os = "linux")]
-        let _linux = match linux_tray::spawn(tx) {
+        let _linux = match linux_tray::spawn(tx.clone(), repaint_ctx.clone()) {
             Ok(h) => Some(h),
             Err(e) => {
                 warn!("system tray unavailable on Linux: {e:#}");
@@ -41,7 +42,7 @@ impl SystemTray {
         };
 
         #[cfg(not(any(target_os = "windows", target_os = "linux")))]
-        let _ = tx;
+        let _ = (tx, repaint_ctx);
 
         Self {
             rx,
@@ -68,10 +69,6 @@ impl SystemTray {
     }
 
     pub fn poll_action(&mut self) -> Option<TrayAction> {
-        #[cfg(target_os = "windows")]
-        if let Some(w) = &self.win {
-            w.pump_events();
-        }
         self.rx.try_recv().ok()
     }
 }
@@ -80,20 +77,17 @@ impl SystemTray {
 mod win_tray {
     use super::*;
     use anyhow::Result;
-    use tray_icon::menu::{Menu, MenuEvent, MenuId, MenuItem};
+    use tray_icon::menu::{Menu, MenuEvent, MenuItem};
     use tray_icon::{Icon, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
     use crate::icon::{rgba_32x32, ICON_SIZE};
 
     pub struct WinTray {
         _tray: TrayIcon,
-        show_id: MenuId,
-        quit_id: MenuId,
-        tx: mpsc::Sender<TrayAction>,
     }
 
     impl WinTray {
-        pub fn new(tx: mpsc::Sender<TrayAction>) -> Result<Self> {
+        pub fn new(tx: mpsc::Sender<TrayAction>, repaint_ctx: egui::Context) -> Result<Self> {
             let menu = Menu::new();
             let show_item = MenuItem::new("Show DeskGlide", true, None);
             let quit_item = MenuItem::new("Quit", true, None);
@@ -109,27 +103,29 @@ mod win_tray {
                 .with_icon(icon)
                 .build()?;
 
-            Ok(Self {
-                _tray: tray,
-                show_id,
-                quit_id,
-                tx,
-            })
-        }
+            let tx_menu = tx.clone();
+            let ctx_menu = repaint_ctx.clone();
+            MenuEvent::set_event_handler(Some(move |ev: MenuEvent| {
+                if ev.id() == &show_id {
+                    let _ = tx_menu.send(TrayAction::ShowWindow);
+                    ctx_menu.request_repaint();
+                } else if ev.id() == &quit_id {
+                    let _ = tx_menu.send(TrayAction::Quit);
+                    ctx_menu.request_repaint();
+                }
+            }));
 
-        pub fn pump_events(&self) {
-            while let Ok(ev) = MenuEvent::receiver().try_recv() {
-                if ev.id() == &self.show_id {
-                    let _ = self.tx.send(TrayAction::ShowWindow);
-                } else if ev.id() == &self.quit_id {
-                    let _ = self.tx.send(TrayAction::Quit);
+            TrayIconEvent::set_event_handler(Some(move |ev: TrayIconEvent| {
+                if matches!(
+                    ev,
+                    TrayIconEvent::Click { .. } | TrayIconEvent::DoubleClick { .. }
+                ) {
+                    let _ = tx.send(TrayAction::ShowWindow);
+                    repaint_ctx.request_repaint();
                 }
-            }
-            while let Ok(ev) = TrayIconEvent::receiver().try_recv() {
-                if matches!(ev, TrayIconEvent::Click { .. } | TrayIconEvent::DoubleClick { .. }) {
-                    let _ = self.tx.send(TrayAction::ShowWindow);
-                }
-            }
+            }));
+
+            Ok(Self { _tray: tray })
         }
     }
 }
@@ -142,9 +138,9 @@ mod linux_tray {
 
     use crate::icon::{rgba_32x32, ICON_SIZE};
 
-    #[derive(Debug)]
     pub struct DeskGlideTray {
         tx: mpsc::Sender<TrayAction>,
+        repaint_ctx: egui::Context,
         icon: ksni::Icon,
     }
 
@@ -163,6 +159,7 @@ mod linux_tray {
 
         fn activate(&mut self, _x: i32, _y: i32) {
             let _ = self.tx.send(TrayAction::ShowWindow);
+            self.repaint_ctx.request_repaint();
         }
 
         fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
@@ -171,6 +168,7 @@ mod linux_tray {
                     label: "Show DeskGlide".into(),
                     activate: Box::new(|this: &mut Self| {
                         let _ = this.tx.send(TrayAction::ShowWindow);
+                        this.repaint_ctx.request_repaint();
                     }),
                     ..Default::default()
                 }
@@ -179,6 +177,7 @@ mod linux_tray {
                     label: "Quit".into(),
                     activate: Box::new(|this: &mut Self| {
                         let _ = this.tx.send(TrayAction::Quit);
+                        this.repaint_ctx.request_repaint();
                     }),
                     ..Default::default()
                 }
@@ -187,7 +186,10 @@ mod linux_tray {
         }
     }
 
-    pub fn spawn(tx: mpsc::Sender<TrayAction>) -> Result<ksni::blocking::Handle<DeskGlideTray>, ksni::Error> {
+    pub fn spawn(
+        tx: mpsc::Sender<TrayAction>,
+        repaint_ctx: egui::Context,
+    ) -> Result<ksni::blocking::Handle<DeskGlideTray>, ksni::Error> {
         let rgba = rgba_32x32();
         let mut argb = Vec::with_capacity(rgba.len());
         for px in rgba.chunks_exact(4) {
@@ -201,6 +203,11 @@ mod linux_tray {
             height: ICON_SIZE as i32,
             data: argb,
         };
-        DeskGlideTray { tx, icon }.spawn()
+        DeskGlideTray {
+            tx,
+            repaint_ctx,
+            icon,
+        }
+        .spawn()
     }
 }
