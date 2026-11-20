@@ -39,8 +39,8 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_app_id("deskglide")
             .with_title("DeskGlide")
-            .with_inner_size([560.0, 700.0])
-            .with_min_inner_size([480.0, 560.0])
+            .with_inner_size([780.0, 540.0])
+            .with_min_inner_size([700.0, 480.0])
             .with_icon(Arc::new(icon::egui_icon())),
         ..Default::default()
     };
