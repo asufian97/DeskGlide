@@ -161,7 +161,6 @@ class LanBridgePipeline:
 
         src = Gst.ElementFactory.make(self._descriptor.gst_source_name, "capture_src")
         conv = Gst.ElementFactory.make("videoconvert", "conv")
-        rate = Gst.ElementFactory.make("videorate", "rate")
         raw_caps = Gst.ElementFactory.make("capsfilter", "raw_caps")
         q_enc = Gst.ElementFactory.make("queue", "enc_queue")
         enc = Gst.ElementFactory.make(self._encoder_spec.element, "video_enc")
@@ -170,7 +169,7 @@ class LanBridgePipeline:
         valve = Gst.ElementFactory.make("valve", "video_valve")
         webrtc = Gst.ElementFactory.make("webrtcbin", "webrtc")
 
-        if not all((src, conv, rate, raw_caps, q_enc, enc, parse, pay, valve, webrtc)):
+        if not all((src, conv, raw_caps, q_enc, enc, parse, pay, valve, webrtc)):
             raise RuntimeError(
                 f"Failed creating GStreamer pipeline elements for {self._descriptor.gst_source_name} / {self._encoder_spec.element}"
             )
@@ -182,8 +181,7 @@ class LanBridgePipeline:
             apply_safe_properties(src, {"path": str(self._descriptor.pipewire_node_id)})
         apply_safe_properties(src, self._descriptor.extra_props)
 
-        # Low-latency frame pacing & queue tuning (do not force fixed framerate for variable Wayland PipeWire)
-        apply_safe_properties(rate, {"drop-only": True, "max-rate": self._fps})
+        # Low-latency pixel format & queue tuning
         raw_caps.set_property(
             "caps",
             Gst.Caps.from_string(f"video/x-raw,format={self._encoder_spec.pixel_format}"),
@@ -205,12 +203,11 @@ class LanBridgePipeline:
         apply_safe_properties(webrtc, {"bundle-policy": "max-bundle"})
 
         # Add elements into video_bin (which can be paused independently in KVM-Only mode)
-        for el in (src, conv, rate, raw_caps, q_enc, enc, parse, pay):
+        for el in (src, conv, raw_caps, q_enc, enc, parse, pay):
             video_bin.add(el)
 
         assert src.link(conv)
-        assert conv.link(rate)
-        assert rate.link(raw_caps)
+        assert conv.link(raw_caps)
         assert raw_caps.link(q_enc)
         assert q_enc.link(enc)
         assert enc.link(parse)

@@ -62,7 +62,6 @@ def run_diagnostics(port: int = 8443) -> int:
             "h264parse",
             "rtph264pay",
             "videoconvert",
-            "videorate",
             "valve",
         ]
         if disp == "wayland":
