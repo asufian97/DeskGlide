@@ -16,7 +16,25 @@
 
 ---
 
-## Download (Pick Your OS — 1 File Only)
+## LanBridge — Zero-Install Browser Remote Desktop & Hybrid KVM (Zorin OS → Windows Chrome/Edge)
+
+Want to control your **Zorin OS laptop** from your **Windows desktop Chrome or Edge browser** with **zero client software installed on Windows** and a 1-click **KVM-Only** mode (`0%` GPU/video overhead)?
+
+1. **Install once on Zorin OS** (1 command):
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/asufian97/DeskGlide/main/lanbridge/get.sh | bash
+   ```
+2. **Start anytime** (1 word, or click **LanBridge** in your Zorin app menu):
+   ```bash
+   lanbridge
+   ```
+3. Open the printed `https://<lan-ip>:8443` URL in Chrome/Edge on Windows and enter the 6-digit PIN.
+
+See [**lanbridge/README.md**](lanbridge/README.md) for full details (`KVM Only` toggle, `Alt+Tab`/`Super` Keyboard Lock, and autostart).
+
+---
+
+## DeskGlide Download (Native Desktop App — Pick Your OS, 1 File Only)
 
 > **You do NOT need to download the whole repository or install Rust.** Just download the **single file** for your operating system from the table below:
 

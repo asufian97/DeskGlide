@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lanbridge"
+version = "0.1.0"
+description = "100% free, zero-cloud, ultra-low-latency LAN WebRTC Remote Desktop & Hybrid Software KVM"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "aiohttp>=3.9",
+    "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+linux = [
+    "evdev>=1.6; sys_platform == 'linux'",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+lanbridge = "lanbridge.main:main"
+lanbridge-doctor = "lanbridge.doctor:main"
+
+[tool.setuptools.packages.find]
+include = ["lanbridge*"]
+
+[tool.setuptools.package-data]
+lanbridge = ["web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

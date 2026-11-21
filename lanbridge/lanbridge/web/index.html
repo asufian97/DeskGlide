@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LanBridge — Zero-Cloud Remote Desktop &amp; KVM</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- PIN Authentication Gate -->
+  <main id="authView" class="auth-shell">
+    <section class="auth-card">
+      <div class="brand-row">
+        <div class="brand-badge" aria-hidden="true">⇄</div>
+        <div>
+          <h1>LanBridge</h1>
+          <p class="muted">Zero-Cloud LAN Remote Desktop &amp; Hybrid KVM</p>
+        </div>
+      </div>
+
+      <form id="authForm" class="auth-form" autocomplete="off">
+        <label for="pinInput">Enter 6-Digit Host Pairing PIN</label>
+        <input
+          id="pinInput"
+          type="password"
+          inputmode="numeric"
+          pattern="[0-9]{6}"
+          maxlength="6"
+          placeholder="••••••"
+          required
+          autofocus
+        />
+        <button id="authBtn" type="submit" class="btn btn-accent">Unlock &amp; Connect</button>
+        <p id="authError" class="error-text" hidden></p>
+      </form>
+
+      <p class="auth-hint">
+        Look at your Host terminal for the 6-digit PIN. Traffic stays strictly inside your local Wi-Fi/LAN.
+      </p>
+    </section>
+  </main>
+
+  <!-- Remote Desktop & KVM Stage -->
+  <div id="stageView" class="stage-shell" hidden>
+    <!-- Hover reveal strip + floating auto-hide toolbar -->
+    <div id="toolbarZone" class="toolbar-zone">
+      <header id="toolbar" class="toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-brand">LanBridge</span>
+          <span id="connPill" class="pill pill-muted">Connecting</span>
+        </div>
+
+        <div class="toolbar-group segmented" role="group" aria-label="Control Mode">
+          <button id="modeScreenBtn" class="seg-btn active" type="button">Screen + Control</button>
+          <button id="modeKvmBtn" class="seg-btn" type="button" title="Pause video encoder (0% GPU), keep input live">KVM Only</button>
+        </div>
+
+        <div class="toolbar-group stats-hud" title="Live WebRTC LAN Telemetry">
+          <span class="hud-chip" id="hudFps">-- fps</span>
+          <span class="hud-chip" id="hudRtt">-- ms</span>
+          <span class="hud-chip" id="hudBitrate">-- Mbps</span>
+          <span class="hud-chip hud-enc" id="hudEncoder">--</span>
+        </div>
+
+        <div class="toolbar-group">
+          <select id="qualitySelect" class="control-select" title="Dynamic Encoder Bitrate">
+            <option value="crisp">Crisp Text (15 Mbps)</option>
+            <option value="balanced" selected>Balanced (10 Mbps)</option>
+            <option value="low">Low Bandwidth (4 Mbps)</option>
+          </select>
+
+          <button id="pointerLockBtn" class="btn btn-sm" type="button" title="Toggle relative mouse lock">Pointer Lock</button>
+          <button id="fullscreenBtn" class="btn btn-sm btn-accent" type="button" title="Fullscreen + capture Alt+Tab &amp; Super">Fullscreen</button>
+          <button id="clipboardBtn" class="btn btn-sm active-outline" type="button" title="Sync clipboard with Host">Clipboard: ON</button>
+          <button id="keyframeBtn" class="btn btn-sm" type="button" title="Force immediate H.264 IDR frame">Keyframe</button>
+          <button id="reconnectBtn" class="btn btn-sm" type="button">Reconnect</button>
+          <button id="logoutBtn" class="btn btn-sm btn-danger" type="button">Lock</button>
+        </div>
+      </header>
+    </div>
+
+    <!-- Hardware-decoded WebRTC Video Stage -->
+    <div id="inputSurface" class="input-surface" tabindex="0">
+      <video id="remoteVideo" autoplay playsinline muted></video>
+
+      <!-- Shown in KVM-Only mode (video pipeline paused at 0% GPU/CPU) -->
+      <div id="kvmOverlay" class="kvm-overlay" hidden>
+        <div class="kvm-card">
+          <h2>KVM-Only Mode Active</h2>
+          <p class="muted">
+            Video capture &amp; GPU encoding are paused (0% video overhead). Move mouse or type here to control the laptop screen directly.
+          </p>
+          <div class="kvm-actions">
+            <button id="kvmPointerLockBtn" class="btn btn-accent" type="button">Capture Mouse &amp; Keyboard</button>
+            <button id="kvmResumeVideoBtn" class="btn" type="button">Resume Screen Mirror</button>
+          </div>
+          <p class="muted small">Shortcut: Ctrl+Alt+M switches modes · Esc releases pointer lock</p>
+        </div>
+      </div>
+
+      <!-- Status overlay when connecting or failed -->
+      <div id="statusOverlay" class="status-overlay">
+        <div class="status-box">
+          <div class="spinner"></div>
+          <p id="statusMessage">Connecting over LAN WebRTC…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/keymap.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

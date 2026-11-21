@@ -1,0 +1,15 @@
+[Unit]
+Description=LanBridge Zero-Cloud LAN Remote Desktop & Hybrid KVM Host
+After=graphical-session.target pipewire.service xdg-desktop-portal.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/lanbridge
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target
