@@ -293,8 +293,23 @@
       } else {
         remoteVideo.srcObject = new MediaStream([ev.track]);
       }
-      setStatus("Live", "pill-live");
+      remoteVideo.play().catch(() => {});
+      if (currentMode !== "kvm") {
+        setStatus("Buffering", "pill-muted", "Waiting for first video frame…");
+      }
       pinToolbarBriefly(3500);
+    };
+
+    remoteVideo.onloadeddata = () => {
+      if (currentMode !== "kvm") {
+        setStatus("Live", "pill-live");
+      }
+    };
+
+    remoteVideo.onplaying = () => {
+      if (currentMode !== "kvm") {
+        setStatus("Live", "pill-live");
+      }
     };
 
     pc.onicecandidate = (ev) => {
@@ -306,6 +321,24 @@
           sdpMLineIndex: ev.candidate.sdpMLineIndex ?? 0,
           candidate: ev.candidate.candidate,
         }));
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (!pc) return;
+      const st = pc.iceConnectionState;
+      if (st === "checking") {
+        if (currentMode !== "kvm" && !remoteVideo.videoWidth) {
+          setStatus("Connecting ICE", "pill-muted", "Connecting ICE over local Wi-Fi…");
+        }
+      } else if (st === "connected" || st === "completed") {
+        sendControl({ type: "keyframe" });
+        if (currentMode !== "kvm" && !remoteVideo.videoWidth) {
+          setStatus("Waiting Frame", "pill-muted", "Connected over LAN — waiting for first H.264 keyframe…");
+        }
+      } else if (st === "failed") {
+        setStatus("ICE Failed", "pill-err", "LAN WebRTC ICE failed — check UFW/firewall UDP between PCs and click Reconnect.");
+        pinToolbarBriefly(8000);
       }
     };
 
@@ -325,6 +358,7 @@
         controlDc = ch;
         controlDc.onopen = () => {
           startStatsPolling();
+          sendControl({ type: "keyframe" });
           inputSurface.focus();
         };
         controlDc.onmessage = (msgEv) => {

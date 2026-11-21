@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import socket
 import sys
 from pathlib import Path
@@ -132,6 +133,10 @@ async def _serve(args: argparse.Namespace) -> None:
 
 
 def main(argv: Optional[list[str]] = None) -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    )
     args = parse_args(argv)
     try:
         asyncio.run(_serve(args))

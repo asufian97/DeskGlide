@@ -255,7 +255,7 @@ class LinuxPortalBackend(CaptureBackend):
             gst_source_name="pipewiresrc",
             pipewire_fd=self._pw_fd,
             pipewire_node_id=self._stream_node_id,
-            extra_props={"do-timestamp": True, "keepalive-time": 1000},
+            extra_props={"do-timestamp": True, "keepalive-time": 1000, "resend-last": True},
         )
 
     # -- Direct RemoteDesktop D-Bus input methods used by LinuxPortalInputBackend --

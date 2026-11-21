@@ -17,6 +17,7 @@ class EncoderSpec:
     element: str
     bitrate_prop: Optional[str] = "bitrate"
     bitrate_unit: str = "kbps"  # "kbps" | "bps"
+    pixel_format: str = "NV12"
     hardware: bool = True
     props: dict[str, Any] = field(default_factory=dict)
 
@@ -26,20 +27,23 @@ _KNOWN_ENCODER_SPECS: dict[str, EncoderSpec] = {
         element="vah264enc",
         bitrate_prop="bitrate",
         bitrate_unit="kbps",
+        pixel_format="NV12",
         hardware=True,
-        props={"rate-control": "cbr", "target-usage": 6},
+        props={"rate-control": "cbr", "target-usage": 6, "b-frames": 0, "key-int-max": 60},
     ),
     "vaapih264enc": EncoderSpec(
         element="vaapih264enc",
         bitrate_prop="bitrate",
         bitrate_unit="kbps",
+        pixel_format="NV12",
         hardware=True,
-        props={"rate-control": "cbr", "tune": "low-power"},
+        props={"rate-control": "cbr", "tune": "low-power", "max-bframes": 0, "keyframe-period": 60},
     ),
     "d3d11h264enc": EncoderSpec(
         element="d3d11h264enc",
         bitrate_prop="bitrate",
         bitrate_unit="kbps",
+        pixel_format="NV12",
         hardware=True,
         props={"rate-control": "cbr", "low-latency": True},
     ),
@@ -47,6 +51,7 @@ _KNOWN_ENCODER_SPECS: dict[str, EncoderSpec] = {
         element="mfh264enc",
         bitrate_prop="bitrate",
         bitrate_unit="kbps",
+        pixel_format="NV12",
         hardware=True,
         props={"low-latency": True, "rc-mode": "cbr"},
     ),
@@ -54,13 +59,15 @@ _KNOWN_ENCODER_SPECS: dict[str, EncoderSpec] = {
         element="nvh264enc",
         bitrate_prop="bitrate",
         bitrate_unit="kbps",
+        pixel_format="NV12",
         hardware=True,
-        props={"zerolatency": True, "rc-mode": "cbr", "preset": "low-latency-hq"},
+        props={"zerolatency": True, "rc-mode": "cbr", "preset": "low-latency-hq", "gop-size": 60},
     ),
     "x264enc": EncoderSpec(
         element="x264enc",
         bitrate_prop="bitrate",
         bitrate_unit="kbps",
+        pixel_format="I420",
         hardware=False,
         props={"tune": "zerolatency", "speed-preset": "ultrafast", "key-int-max": 60},
     ),

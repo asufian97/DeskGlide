@@ -58,8 +58,11 @@ fi
 
 if command -v ufw >/dev/null 2>&1; then
   if sudo ufw status 2>/dev/null | grep -q "Status: active"; then
-    echo "=== Allowing TCP port 8443 through active UFW firewall ==="
+    echo "=== Allowing TCP port 8443 and LAN WebRTC UDP through active UFW firewall ==="
     sudo ufw allow 8443/tcp comment 'LanBridge HTTPS/WSS'
+    sudo ufw allow from 192.168.0.0/16 to any proto udp comment 'LanBridge LAN WebRTC'
+    sudo ufw allow from 10.0.0.0/8 to any proto udp comment 'LanBridge LAN WebRTC'
+    sudo ufw allow from 172.16.0.0/12 to any proto udp comment 'LanBridge LAN WebRTC'
   fi
 fi
 

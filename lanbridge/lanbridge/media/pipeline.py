@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import threading
 from typing import Any, Callable, Optional
 
@@ -15,6 +16,8 @@ from lanbridge.media.probe import (
 )
 from lanbridge.protocol import QUALITY_PRESETS
 from lanbridge.security import filter_lan_ice_candidate
+
+logger = logging.getLogger("lanbridge.pipeline")
 
 
 class HybridModeController:
@@ -139,6 +142,7 @@ class LanBridgePipeline:
         self._webrtc: Any = None
         self._control_dc: Any = None
         self._move_dc: Any = None
+        self._negotiated = False
         self._closed = False
 
         self._build_pipeline()
@@ -178,11 +182,11 @@ class LanBridgePipeline:
             apply_safe_properties(src, {"path": str(self._descriptor.pipewire_node_id)})
         apply_safe_properties(src, self._descriptor.extra_props)
 
-        # Low-latency frame pacing & queue tuning
-        apply_safe_properties(rate, {"drop-only": True})
+        # Low-latency frame pacing & queue tuning (do not force fixed framerate for variable Wayland PipeWire)
+        apply_safe_properties(rate, {"drop-only": True, "max-rate": self._fps})
         raw_caps.set_property(
             "caps",
-            Gst.Caps.from_string(f"video/x-raw,framerate={self._fps}/1"),
+            Gst.Caps.from_string(f"video/x-raw,format={self._encoder_spec.pixel_format}"),
         )
         apply_safe_properties(q_enc, {"leaky": 2, "max-size-buffers": 2, "max-size-bytes": 0, "max-size-time": 0})
 
@@ -235,6 +239,7 @@ class LanBridgePipeline:
 
         webrtc.connect("on-negotiation-needed", self._on_negotiation_needed)
         webrtc.connect("on-ice-candidate", self._on_ice_candidate_cb)
+        webrtc.connect("notify::ice-connection-state", self._on_ice_state_changed)
 
         bus = pipe.get_bus()
         bus.add_signal_watch()
@@ -251,14 +256,18 @@ class LanBridgePipeline:
         def _start_cb() -> bool:
             if self._closed or self._pipeline is None:
                 return False
-            self._create_datachannels()
+            logger.info(
+                "Starting GStreamer pipeline (%s -> %s)",
+                self._descriptor.gst_source_name,
+                self._encoder_spec.element,
+            )
             self._pipeline.set_state(self._Gst.State.PLAYING)
             return False
 
         self._run_on_glib(_start_cb)
 
     def _create_datachannels(self) -> None:
-        if self._webrtc is None:
+        if self._webrtc is None or (self._move_dc is not None and self._control_dc is not None):
             return
         Gst = self._Gst
 
@@ -291,6 +300,11 @@ class LanBridgePipeline:
         self._emit_async(self._on_control_message, text)
 
     def _on_negotiation_needed(self, element: Any) -> None:
+        if self._negotiated:
+            return
+        self._negotiated = True
+        self._create_datachannels()
+        logger.info("WebRTC negotiation needed; creating SDP offer")
         promise = self._Gst.Promise.new_with_change_func(self._on_offer_created, element, None)
         element.emit("create-offer", None, promise)
 
@@ -305,12 +319,29 @@ class LanBridgePipeline:
         sdp_text = offer.sdp.as_text()
         self._emit_async(self._on_offer_sdp, sdp_text)
 
+    def _timeout_force_keyframe(self) -> bool:
+        if not self._closed:
+            self._emit_force_keyframe_locked()
+        return False
+
+    def _on_ice_state_changed(self, element: Any, _pspec: Any) -> None:
+        try:
+            state = element.get_property("ice-connection-state")
+        except Exception:
+            return
+        state_name = getattr(state, "value_nick", str(state)).lower()
+        logger.info("WebRTC ICE connection state -> %s", state_name)
+        if state_name in ("connected", "completed"):
+            self._emit_force_keyframe_locked()
+            self._GLib.timeout_add(500, self._timeout_force_keyframe)
+
     def _on_ice_candidate_cb(self, _element: Any, mline_index: int, candidate: str) -> None:
         if filter_lan_ice_candidate(candidate):
             self._emit_async(self._on_ice_candidate, int(mline_index), candidate)
 
     def _on_bus_error(self, _bus: Any, msg: Any) -> None:
         err, debug = msg.parse_error()
+        logger.error("GStreamer pipeline error: %s (%s)", err.message, debug)
         if self._on_error is not None:
             self._emit_async(self._on_error, f"{err.message} ({debug})")
 
@@ -320,11 +351,13 @@ class LanBridgePipeline:
                 return False
             res, sdp_msg = self._GstSdp.SDPMessage.new_from_text(sdp_text)
             if res != self._GstSdp.SDPResult.OK:
+                logger.warning("Failed parsing remote SDP answer")
                 return False
             answer = self._GstWebRTC.WebRTCSessionDescription.new(
                 self._GstWebRTC.WebRTCSDPType.ANSWER, sdp_msg
             )
             self._webrtc.emit("set-remote-description", answer, self._Gst.Promise.new())
+            logger.info("Applied remote SDP answer")
             return False
 
         self._run_on_glib(_apply)
