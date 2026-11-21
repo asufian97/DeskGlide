@@ -810,13 +810,30 @@ impl DeskGlideApp {
         });
     }
 
-    fn draw_client_tab(&mut self, ui: &mut egui::Ui, _status: &EngineStatus) {
+    fn draw_client_tab(&mut self, ui: &mut egui::Ui, status: &EngineStatus) {
         let running = self.is_running();
         let self_fp = self
             .identity
             .as_ref()
             .map(|id| id.fingerprint_str())
             .unwrap_or_default();
+
+        if let EngineStatus::Error(err) = status {
+            egui::Frame::new()
+                .fill(DANGER_BG)
+                .stroke(Stroke::new(1.0, RED))
+                .corner_radius(8.0)
+                .inner_margin(egui::Margin::symmetric(12, 8))
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.label(
+                        RichText::new(format!("Client Error: {err}"))
+                            .size(12.5)
+                            .color(RED),
+                    );
+                });
+            ui.add_space(10.0);
+        }
 
         let avail_w = ui.available_width();
         let gap = 14.0;
@@ -991,7 +1008,7 @@ impl DeskGlideApp {
                                                     egui::TextEdit::singleline(
                                                         &mut self.pairing_code_input,
                                                     )
-                                                    .hint_text("XXXX-XXXX")
+                                                    .hint_text("1234")
                                                     .desired_width(150.0),
                                                 );
                                                 let enter = resp.lost_focus()
@@ -1127,7 +1144,7 @@ impl DeskGlideApp {
                                     ui.label("Code:");
                                     ui.add(
                                         egui::TextEdit::singleline(&mut self.manual_secret)
-                                            .hint_text("XXXX-XXXX")
+                                            .hint_text("1234")
                                             .desired_width(165.0),
                                     );
                                     ui.end_row();

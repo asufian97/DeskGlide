@@ -12,25 +12,16 @@ use crate::session::{read_single_frame, write_frame};
 const EKM_LABEL: &[u8] = b"deskglide-auth-v1";
 const CLIENT_ROLE: &[u8] = b"client";
 const SERVER_ROLE: &[u8] = b"server";
-const SECRET_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 pub struct AuthPeerInfo {
     pub name: String,
     pub os: OsKind,
 }
 
-/// Generate a human-friendly 8-character pairing code (e.g. `K7M2-9X4P`).
+/// Generate a human-friendly 4-digit numeric pairing PIN (e.g. `4829`).
 pub fn generate_pairing_secret() -> String {
     let mut rng = rand::rng();
-    let mut s = String::with_capacity(9);
-    for i in 0..8 {
-        if i == 4 {
-            s.push('-');
-        }
-        let idx = rng.random_range(0..SECRET_ALPHABET.len());
-        s.push(SECRET_ALPHABET[idx] as char);
-    }
-    s
+    format!("{:04}", rng.random_range(1000u16..=9999))
 }
 
 fn export_binding(conn: &Connection) -> Result<[u8; 32]> {

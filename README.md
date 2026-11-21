@@ -44,7 +44,7 @@ Need an older version or checksums? See the [**All Releases**](https://github.co
    - *(Using the portable Windows ZIP? Click **"Allow Windows Firewall (UDP 24910)"** once inside the app.)*
 2. **On your second PC:**
    - Open **DeskGlide** and select **Client (Control this PC)**.
-   - Your Host PC appears automatically under **PCs Found on Your Wi-Fi** — click **Pair &amp; Connect** and type the 8-character pairing code shown on the Host.
+   - Your Host PC appears automatically under **PCs Found on Your Wi-Fi** — click **Pair &amp; Connect** and type the 4-digit pairing code shown on the Host.
 3. **Glide seamlessly:**
    - Move your mouse past the chosen monitor edge — or press **`Ctrl+Alt+S`** — to jump between **Windows 11** and **Zorin OS / Linux** in either direction (**Windows ↔ Linux**, **Windows ↔ Windows**, **Linux ↔ Linux**).
 
@@ -67,7 +67,7 @@ Need an older version or checksums? See the [**All Releases**](https://github.co
 
 - **100% local LAN/Wi-Fi** — zero cloud servers, accounts, or telemetry.
 - **Encrypted end-to-end** — TLS 1.3 mandatory on every packet (`UDP 24910`).
-- **MITM protection** — every Host auto-generates its own ECDSA P-256 certificate pinned by SHA-256 fingerprint plus RFC 5705 channel-bound HMAC authentication against your 8-character pairing code.
+- **MITM protection** — every Host auto-generates its own ECDSA P-256 certificate pinned by SHA-256 fingerprint plus RFC 5705 channel-bound HMAC authentication against your 4-digit pairing code.
 
 ---
 

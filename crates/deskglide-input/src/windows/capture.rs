@@ -26,10 +26,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     RegisterClassExW, SetCursorPos, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx,
     HC_ACTION, HHOOK, HWND_MESSAGE, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, LLKHF_INJECTED, LLKHF_UP,
     MSG, MSLLHOOKSTRUCT, SM_CXSCREEN, SM_CXVIRTUALSCREEN, SM_CYSCREEN, SM_CYVIRTUALSCREEN,
-    SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_APP, WM_KEYDOWN,
-    WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL,
-    WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP, WNDCLASSEXW, XBUTTON1, XBUTTON2,
+    SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, UnregisterClassW, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_APP,
+    WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
+    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP,
+    WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP, WNDCLASSEXW, XBUTTON1, XBUTTON2,
 };
 
 use crate::hotkey::{Hotkey, HotkeyStateMachine};
@@ -39,6 +39,7 @@ const WM_INPUT: u32 = 0x00FF;
 const WM_SYNC_ACTIVE: u32 = WM_APP + 1;
 const WM_RESTORE_EDGE: u32 = WM_APP + 2;
 const EDGE_BARRIER_PX: i32 = 24;
+const ERROR_CLASS_ALREADY_EXISTS: u32 = 1410;
 const HID_USAGE_PAGE_GENERIC: u16 = 0x01;
 const HID_USAGE_GENERIC_MOUSE: u16 = 0x02;
 const LLMHF_INJECTED: u32 = 0x0000_0001;
@@ -228,8 +229,11 @@ fn run_hook_thread(
         };
         if RegisterClassExW(&wc) == 0 {
             let err = GetLastError();
-            let _ = ready_tx.send(Err(anyhow::anyhow!("RegisterClassExW failed: win32={err}")));
-            return;
+            if err != ERROR_CLASS_ALREADY_EXISTS {
+                let _ =
+                    ready_tx.send(Err(anyhow::anyhow!("RegisterClassExW failed: win32={err}")));
+                return;
+            }
         }
 
         let hwnd = CreateWindowExW(
@@ -314,6 +318,7 @@ fn run_hook_thread(
         let _ = UnhookWindowsHookEx(mouse_hook);
         let _ = UnhookWindowsHookEx(kb_hook);
         let _ = DestroyWindow(hwnd);
+        let _ = UnregisterClassW(class_name.as_ptr(), hinst);
         HOOK_CTX.with(|c| {
             if let Some(mut ctx) = c.borrow_mut().take() {
                 ctx.leave_remote();

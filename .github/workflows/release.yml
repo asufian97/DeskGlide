@@ -45,7 +45,7 @@ jobs:
       - name: Package Zorin/Ubuntu .deb and Portable tar.gz
         run: |
           VER="${GITHUB_REF_NAME#v}"
-          if [[ "$VER" == "$GITHUB_REF_NAME" ]] || [[ -z "$VER" ]]; then VER="0.1.1"; fi
+          if [[ "$VER" == "$GITHUB_REF_NAME" ]] || [[ -z "$VER" ]]; then VER="0.1.2"; fi
           chmod +x packaging/linux/debian/postinst scripts/linux/setup-uinput.sh
           mkdir -p dist/deb_pkg/DEBIAN dist/deb_pkg/usr/bin dist/deb_pkg/usr/lib/udev/rules.d dist/deb_pkg/usr/share/applications dist/deb_pkg/usr/share/icons/hicolor/scalable/apps dist/deb_pkg/etc/modules-load.d dist/portable_tmp
 
@@ -95,7 +95,7 @@ jobs:
       - name: Build Windows Installer (Inno Setup) and Portable ZIP
         shell: pwsh
         run: |
-          $ver = if ($env:GITHUB_REF_NAME -match '^v(.+)$') { $matches[1] } else { "0.1.0" }
+          $ver = if ($env:GITHUB_REF_NAME -match '^v(.+)$') { $matches[1] } else { "0.1.2" }
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           powershell -ExecutionPolicy Bypass -File scripts/windows/package-portable.ps1
           choco install innosetup -y --no-progress
