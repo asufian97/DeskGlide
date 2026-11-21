@@ -13,6 +13,7 @@ sudo apt-get install -y \
   python3-gi \
   python3-gi-cairo \
   python3-gst-1.0 \
+  python3-evdev \
   gir1.2-gstreamer-1.0 \
   gir1.2-gst-plugins-base-1.0 \
   gir1.2-gst-plugins-bad-1.0 \
@@ -34,7 +35,7 @@ echo ""
 echo "=== Creating virtualenv with --system-site-packages (preserves python3-gi/Gst) ==="
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install -e ".[linux]"
+.venv/bin/pip install -e .
 
 echo "=== Installing global commands: lanbridge & lanbridge-doctor ==="
 sudo ln -sf "$SCRIPT_DIR/.venv/bin/lanbridge" /usr/local/bin/lanbridge
