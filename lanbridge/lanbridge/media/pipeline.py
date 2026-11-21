@@ -160,7 +160,15 @@ class LanBridgePipeline:
         video_bin = Gst.Bin.new("video_bin")
 
         src = Gst.ElementFactory.make(self._descriptor.gst_source_name, "capture_src")
-        conv = Gst.ElementFactory.make("videoconvert", "conv")
+        use_va_proc = (
+            self._encoder_spec.element == "vah264enc"
+            and Gst.ElementFactory.find("vapostproc") is not None
+        )
+        conv = (
+            Gst.ElementFactory.make("vapostproc", "conv")
+            if use_va_proc
+            else Gst.ElementFactory.make("videoconvert", "conv")
+        )
         raw_caps = Gst.ElementFactory.make("capsfilter", "raw_caps")
         q_enc = Gst.ElementFactory.make("queue", "enc_queue")
         enc = Gst.ElementFactory.make(self._encoder_spec.element, "video_enc")
@@ -181,12 +189,17 @@ class LanBridgePipeline:
             apply_safe_properties(src, {"path": str(self._descriptor.pipewire_node_id)})
         apply_safe_properties(src, self._descriptor.extra_props)
 
-        # Low-latency pixel format & queue tuning
+        # Multi-threaded fallback if CPU videoconvert is active + 1-frame leaky queue
+        if not use_va_proc:
+            apply_safe_properties(conv, {"n-threads": 4})
         raw_caps.set_property(
             "caps",
             Gst.Caps.from_string(f"video/x-raw,format={self._encoder_spec.pixel_format}"),
         )
-        apply_safe_properties(q_enc, {"leaky": 2, "max-size-buffers": 2, "max-size-bytes": 0, "max-size-time": 0})
+        apply_safe_properties(
+            q_enc,
+            {"leaky": 2, "max-size-buffers": 1, "max-size-bytes": 0, "max-size-time": 0},
+        )
 
         # Hardware / zerolatency H.264 encoder tuning
         apply_safe_properties(enc, self._encoder_spec.props)

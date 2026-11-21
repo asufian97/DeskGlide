@@ -260,104 +260,82 @@ class LinuxPortalBackend(CaptureBackend):
 
     # -- Direct RemoteDesktop D-Bus input methods used by LinuxPortalInputBackend --
 
-    def notify_pointer_motion(self, dx: float, dy: float) -> None:
+    def _call_input_async(self, method: str, variant: Any) -> None:
         if not self._bus or not self._session_handle:
             return
-        Gio, GLib = _load_gio()
+        Gio, _ = _load_gio()
         with self._lock:
-            self._bus.call_sync(
+            self._bus.call(
                 PORTAL_BUS_NAME,
                 PORTAL_OBJECT_PATH,
                 REMOTEDESKTOP_IFACE,
-                "NotifyPointerMotion",
-                GLib.Variant("(oa{sv}dd)", (self._session_handle, {}, float(dx), float(dy))),
+                method,
+                variant,
                 None,
                 Gio.DBusCallFlags.NONE,
                 1000,
                 None,
+                None,
             )
+
+    def notify_pointer_motion(self, dx: float, dy: float) -> None:
+        if not self._bus or not self._session_handle:
+            return
+        _, GLib = _load_gio()
+        self._call_input_async(
+            "NotifyPointerMotion",
+            GLib.Variant("(oa{sv}dd)", (self._session_handle, {}, float(dx), float(dy))),
+        )
 
     def notify_pointer_motion_absolute(self, x_norm: int, y_norm: int) -> None:
         if not self._bus or not self._session_handle or self._stream_node_id is None:
             return
-        Gio, GLib = _load_gio()
+        _, GLib = _load_gio()
         x = (max(0, min(65535, x_norm)) / 65535.0) * float(self._width)
         y = (max(0, min(65535, y_norm)) / 65535.0) * float(self._height)
-        with self._lock:
-            self._bus.call_sync(
-                PORTAL_BUS_NAME,
-                PORTAL_OBJECT_PATH,
-                REMOTEDESKTOP_IFACE,
-                "NotifyPointerMotionAbsolute",
-                GLib.Variant(
-                    "(oa{sv}udd)",
-                    (self._session_handle, {}, int(self._stream_node_id), x, y),
-                ),
-                None,
-                Gio.DBusCallFlags.NONE,
-                1000,
-                None,
-            )
+        self._call_input_async(
+            "NotifyPointerMotionAbsolute",
+            GLib.Variant(
+                "(oa{sv}udd)",
+                (self._session_handle, {}, int(self._stream_node_id), x, y),
+            ),
+        )
 
     def notify_pointer_button(self, evdev_button: int, pressed: bool) -> None:
         if not self._bus or not self._session_handle:
             return
-        Gio, GLib = _load_gio()
-        with self._lock:
-            self._bus.call_sync(
-                PORTAL_BUS_NAME,
-                PORTAL_OBJECT_PATH,
-                REMOTEDESKTOP_IFACE,
-                "NotifyPointerButton",
-                GLib.Variant(
-                    "(oa{sv}iu)",
-                    (self._session_handle, {}, int(evdev_button), 1 if pressed else 0),
-                ),
-                None,
-                Gio.DBusCallFlags.NONE,
-                1000,
-                None,
-            )
+        _, GLib = _load_gio()
+        self._call_input_async(
+            "NotifyPointerButton",
+            GLib.Variant(
+                "(oa{sv}iu)",
+                (self._session_handle, {}, int(evdev_button), 1 if pressed else 0),
+            ),
+        )
 
     def notify_pointer_axis_discrete(self, axis: int, steps: int) -> None:
         if not self._bus or not self._session_handle or steps == 0:
             return
-        Gio, GLib = _load_gio()
-        with self._lock:
-            self._bus.call_sync(
-                PORTAL_BUS_NAME,
-                PORTAL_OBJECT_PATH,
-                REMOTEDESKTOP_IFACE,
-                "NotifyPointerAxisDiscrete",
-                GLib.Variant(
-                    "(oa{sv}ui)",
-                    (self._session_handle, {}, int(axis), int(steps)),
-                ),
-                None,
-                Gio.DBusCallFlags.NONE,
-                1000,
-                None,
-            )
+        _, GLib = _load_gio()
+        self._call_input_async(
+            "NotifyPointerAxisDiscrete",
+            GLib.Variant(
+                "(oa{sv}ui)",
+                (self._session_handle, {}, int(axis), int(steps)),
+            ),
+        )
 
     def notify_keyboard_keycode(self, evdev_keycode: int, pressed: bool) -> None:
         if not self._bus or not self._session_handle:
             return
-        Gio, GLib = _load_gio()
-        with self._lock:
-            self._bus.call_sync(
-                PORTAL_BUS_NAME,
-                PORTAL_OBJECT_PATH,
-                REMOTEDESKTOP_IFACE,
-                "NotifyKeyboardKeycode",
-                GLib.Variant(
-                    "(oa{sv}iu)",
-                    (self._session_handle, {}, int(evdev_keycode), 1 if pressed else 0),
-                ),
-                None,
-                Gio.DBusCallFlags.NONE,
-                1000,
-                None,
-            )
+        _, GLib = _load_gio()
+        self._call_input_async(
+            "NotifyKeyboardKeycode",
+            GLib.Variant(
+                "(oa{sv}iu)",
+                (self._session_handle, {}, int(evdev_keycode), 1 if pressed else 0),
+            ),
+        )
 
     def close(self) -> None:
         if self._pw_fd is not None:

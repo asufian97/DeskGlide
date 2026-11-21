@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Tuple
 
 QUALITY_PRESETS: dict[str, int] = {
-    "crisp": 15000,     # 15 Mbps (kbps)
-    "balanced": 10000,  # 10 Mbps (kbps)
-    "low": 4000,        # 4 Mbps (kbps)
+    "crisp": 12000,     # 12 Mbps (kbps)
+    "balanced": 6000,   # 6 Mbps (kbps)
+    "low": 2500,        # 2.5 Mbps (kbps)
 }
 
 MOUSE_ABS = 1

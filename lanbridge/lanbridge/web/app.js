@@ -288,6 +288,10 @@
     pc = new RTCPeerConnection({ iceServers: [] });
 
     pc.ontrack = (ev) => {
+      if (ev.receiver) {
+        if ("playoutDelayHint" in ev.receiver) ev.receiver.playoutDelayHint = 0;
+        if ("jitterBufferTarget" in ev.receiver) ev.receiver.jitterBufferTarget = 0;
+      }
       if (ev.streams && ev.streams[0]) {
         remoteVideo.srcObject = ev.streams[0];
       } else {
@@ -414,33 +418,63 @@
     };
   }
 
-  // Pointer & Keyboard event capture
-  inputSurface.addEventListener("mousemove", (ev) => {
-    if (document.pointerLockElement === inputSurface) {
-      if (ev.movementX || ev.movementY) {
-        sendMouseRel(ev.movementX, ev.movementY);
-      }
-      return;
+  // Pointer & Keyboard event capture (coalesced per animation frame)
+  let pendingAbs = null;
+  let pendingRelX = 0;
+  let pendingRelY = 0;
+  let moveRaf = 0;
+
+  function flushPendingMouse() {
+    if (moveRaf) {
+      cancelAnimationFrame(moveRaf);
+      moveRaf = 0;
     }
-    if (currentMode === "kvm") {
-      // Relative fallback if pointer isn't locked on KVM pad
+    if (pendingRelX !== 0 || pendingRelY !== 0) {
+      sendMouseRel(pendingRelX, pendingRelY);
+      pendingRelX = 0;
+      pendingRelY = 0;
+    }
+    if (pendingAbs) {
+      sendMouseAbs(pendingAbs[0], pendingAbs[1]);
+      pendingAbs = null;
+    }
+  }
+
+  function scheduleMouseFlush() {
+    if (!moveRaf) {
+      moveRaf = requestAnimationFrame(() => {
+        moveRaf = 0;
+        flushPendingMouse();
+      });
+    }
+  }
+
+  inputSurface.addEventListener("mousemove", (ev) => {
+    if (document.pointerLockElement === inputSurface || currentMode === "kvm") {
       if (ev.movementX || ev.movementY) {
-        sendMouseRel(ev.movementX, ev.movementY);
+        pendingRelX += ev.movementX;
+        pendingRelY += ev.movementY;
+        scheduleMouseFlush();
       }
       return;
     }
     const coords = mapClientToVideoNorm(ev.clientX, ev.clientY);
-    if (coords) sendMouseAbs(coords[0], coords[1]);
+    if (coords) {
+      pendingAbs = coords;
+      scheduleMouseFlush();
+    }
   });
 
   inputSurface.addEventListener("mousedown", (ev) => {
     ev.preventDefault();
+    flushPendingMouse();
     inputSurface.focus();
     sendControl({ type: "mouse_btn", button: ev.button, pressed: true });
   });
 
   inputSurface.addEventListener("mouseup", (ev) => {
     ev.preventDefault();
+    flushPendingMouse();
     sendControl({ type: "mouse_btn", button: ev.button, pressed: false });
   });
 
